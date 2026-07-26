@@ -3,3 +3,7 @@ Thumbs.db
 node_modules/
 *.log
 .drawio-live-mcp/
+
+.agents/
+.claude/
+.codex/
