@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -68,6 +69,43 @@ test("update reassembles an existing install", () => {
   assert.equal(
     fs.existsSync(path.join(claudeSkillDir(root), "SKILL.md")),
     true,
+  );
+
+  cleanup(root);
+  cleanup(codexHome);
+});
+
+test("update refreshes the recorded source commit and timestamp", () => {
+  const root = seededRepo("update-manifest");
+  const codexHome = makeTempDir("update-manifest-codex");
+  const manifestFile = path.join(
+    root,
+    ".agents",
+    "drawio-scientific-install.json",
+  );
+  const read = () => JSON.parse(fs.readFileSync(manifestFile, "utf8"));
+
+  runCli("install.mjs", ["--project", root, "--platform", "both"], {
+    codexHome,
+  });
+  const before = read();
+
+  assert.equal(
+    runCli("update.mjs", ["--project", root], { codexHome }).status,
+    0,
+  );
+  const after = read();
+
+  const head = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: path.resolve(import.meta.dirname, "..", "..", ".."),
+    encoding: "utf8",
+  }).trim();
+
+  assert.equal(after.sourceCommit, head);
+  assert.equal(after.installedAt, before.installedAt);
+  assert.ok(
+    Date.parse(after.updatedAt) > Date.parse(before.updatedAt),
+    `updatedAt did not advance: ${before.updatedAt} -> ${after.updatedAt}`,
   );
 
   cleanup(root);

@@ -7,6 +7,8 @@
   "scripts": {
     "check": "node --check plugins/drawio-scientific-illustrator/scripts/drawio-path.mjs && node --check plugins/drawio-scientific-illustrator/scripts/live-server.mjs && node --check plugins/drawio-scientific-illustrator/scripts/server.mjs && node scripts/validate-repo.mjs",
     "test": "npm run check && node scripts/smoke-test.mjs",
+    "test:project-local": "node --test \"adapters/project-local/tests/*.test.mjs\" && node adapters/project-local/tests/check-global-pollution.mjs",
+    "test:all": "npm test && npm run test:project-local",
     "sync:upstream": "node scripts/sync-upstream.mjs"
   },
   "engines": {

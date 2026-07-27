@@ -44,8 +44,13 @@ npm scripts,并新增 GitHub Actions 工作流(Node 22 × Windows/Ubuntu)。不�
   (实测:全程 `CODEX_HOME` 重定向的情况下真实配置仍被 Codex 改动),mtime 断言必然假阳性。
   改用两条精确断言(子任务 3 已手工验证,见其 `research/verification.md`):
   1. 真实配置不含 `drawio-scientific-illustrator managed block`;
-  2. `~/.codex/config.toml.bak` 时间戳未被刷新 —— 本安装器的 `write()` 每次写入前必 copy
-     一份 `.bak`,故 `.bak` 未动即是"写入器从未针对该路径运行过"的正面证据。
+  2. ~~`~/.codex/config.toml.bak` 时间戳未被刷新~~ —— **实现时改进,见 design.md §3**:
+     子任务 4 已把备份后缀改成 `.drawio-install.bak`(原 `.bak` 与 Codex 自己的备份重名),
+     该后缀 Codex 永远不会产生,故直接断言 `~/.codex/config.toml.drawio-install.bak`
+     **不存在** 即可 —— 无需基线、无需 mtime 比对,且不会被第三方写入干扰。
+- 前后快照亦改为绝对后置条件(design.md §3):`node --test` 每个文件独立进程,
+  单个测试文件无法观测整套的前后状态;改由 `tests/check-global-pollution.mjs`
+  在 `node --test` 之后独立运行。
 - 所有 Codex 用户级测试必须设置 `CODEX_HOME` 指向临时目录。
 
 ### npm scripts 与 CI
@@ -58,7 +63,14 @@ npm scripts,并新增 GitHub Actions 工作流(Node 22 × Windows/Ubuntu)。不�
 
 ## Acceptance Criteria
 
-- [ ] `npm run test:all` 本地(Windows)全绿;单测覆盖上表全部模块与场景。
-- [ ] 集成矩阵 10 场景全部有对应测试并通过。
-- [ ] 全局污染断言存在且通过。
+- [x] `npm run test:all` 本地(Windows)全绿:71 tests / 71 pass。新增 `paths.test.mjs`
+      补齐盘符归一与源缺失中止,`patch-codex-config` 补齐 TOML 反斜杠转义断言。
+- [x] 集成矩阵 10 场景全部有对应测试并通过:1–8 在 `integration.test.mjs`,
+      9–10 在 `lifecycle.test.mjs`(映射表见 design.md §5;row 9 的 "commit 刷新"
+      本次新增断言)。
+- [x] 全局污染断言存在且通过 —— 且做过反向验证:构造带 managed block、
+      `.drawio-install.bak` 与 skill 目录的假 HOME,三条断言全部触发、退出 1。
 - [ ] CI 在 dev 分支 push 后 windows+ubuntu 双绿(证据:run 链接存 research/)。
+      **待 push;push 属对外动作,已单独向用户确认。**
+- [x] 附带决议:`validate-repo.mjs` 扫描范围扩展到 `adapters/project-local/**/*.mjs`
+      (design.md §7)。扩展后立刻抓到本次新写测试里的 `C:/Users/...` 字面量,已改为中性路径。

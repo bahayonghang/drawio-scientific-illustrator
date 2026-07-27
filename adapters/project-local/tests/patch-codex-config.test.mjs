@@ -135,6 +135,30 @@ test("records the bound project and refuses to rebind without force", () => {
   cleanup(other);
 });
 
+test("a Windows absolute path is written without backslash escaping", () => {
+  const dir = makeTempDir("codex-winpath");
+  const file = configFile(dir);
+  const windowsEntries = ENTRIES.map((entry) => ({
+    ...entry,
+    cwd: "C:/work/example/.agents/skills/x",
+  }));
+
+  patchCodexConfig({ file, entries: windowsEntries, projectRoot: dir });
+
+  const text = readFile(file);
+  const cwdLines = text.match(/^cwd = ".*"$/gm) ?? [];
+  assert.equal(cwdLines.length, windowsEntries.length);
+  for (const line of cwdLines) {
+    // A backslash in a TOML basic string is an escape sequence: "C:\Users"
+    // would parse as a tab-and-garbage, or fail outright. Forward slashes work
+    // on Windows and need no escaping, so they are what the writer emits.
+    assert.equal(line.includes("\\"), false);
+    assert.equal(line, 'cwd = "C:/work/example/.agents/skills/x"');
+  }
+
+  cleanup(dir);
+});
+
 test("removing the block restores the surrounding content", () => {
   const dir = makeTempDir("codex-remove");
   const file = configFile(dir);

@@ -38,14 +38,14 @@ export const SOURCE_FILES = [
   },
 ];
 
-export function assertSourcesPresent() {
+export function assertSourcesPresent(root = sourceRoot) {
   const missing = SOURCE_FILES.map((file) => file.from).filter(
-    (relative) => !existsSync(path.join(sourceRoot, relative)),
+    (relative) => !existsSync(path.join(root, relative)),
   );
   if (missing.length > 0) {
     throw new ExitError(
       1,
-      `Source files are missing from ${sourceRoot}: ${missing.join(", ")}. Run this installer from a complete checkout of the fork.`,
+      `Source files are missing from ${root}: ${missing.join(", ")}. Run this installer from a complete checkout of the fork.`,
     );
   }
 }
