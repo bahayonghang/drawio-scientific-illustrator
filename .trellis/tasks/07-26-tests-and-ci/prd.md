@@ -70,7 +70,8 @@ npm scripts,并新增 GitHub Actions 工作流(Node 22 × Windows/Ubuntu)。不�
       本次新增断言)。
 - [x] 全局污染断言存在且通过 —— 且做过反向验证:构造带 managed block、
       `.drawio-install.bak` 与 skill 目录的假 HOME,三条断言全部触发、退出 1。
-- [ ] CI 在 dev 分支 push 后 windows+ubuntu 双绿(证据:run 链接存 research/)。
-      **待 push;push 属对外动作,已单独向用户确认。**
+- [x] CI 在 dev 分支 push 后 windows+ubuntu 双绿。证据:`research/ci.md`
+      (run 30248517365,两条 matrix 腿 3 个步骤全绿;design.md §6 标记的 Linux 首跑风险
+      未兑现)。
 - [x] 附带决议:`validate-repo.mjs` 扫描范围扩展到 `adapters/project-local/**/*.mjs`
       (design.md §7)。扩展后立刻抓到本次新写测试里的 `C:/Users/...` 字面量,已改为中性路径。

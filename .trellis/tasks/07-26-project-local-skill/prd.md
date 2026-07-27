@@ -105,8 +105,9 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
       且做过反向验证(伪造 HOME 时三条断言全部触发)。
 - [x] `git diff upstream/main -- plugins/drawio-scientific-illustrator` 为空。
       2026-07-27 复核输出为空。
-- [~] `npm test` 与 `npm run test:project-local` 全部通过(本地 Windows 72/72,含污染检查);
-      **CI 双系统绿色待 push 后确认** —— 见下方"未完成项"。
+- [x] `npm test` 与 `npm run test:project-local` 全部通过(本地 Windows 72/72,含污染检查);
+      CI 双系统绿色 —— `07-26-tests-and-ci/research/ci.md`,run 30248517365,
+      ubuntu-latest 与 windows-latest 两条 matrix 腿全绿。
 - [~] Windows 实机端到端全流程可用;未安装项目中 Skill 不可见。
       证据:e2e.md §2(删除 fork 副本后仍完成 launch → 加节点/边 → fit → 截图 → 保存 →
       validate → 导出 PNG,PNG 实际渲染正确)、§3(Codex `debug prompt-input`:已安装项目从
@@ -119,10 +120,15 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
       (fork 副本删除后安装仍完全可用)。**限定**:所有演练均带 `--no-push`,
       两条 push 语句尚未真实执行过。
 
-### 未完成项(需用户决策)
+### 遗留项
 
-- CI 双系统绿色:需 push `dev` 触发 `.github/workflows/project-local-adapter.yml`。
-- 发布标签 `dev-project-local-v0.1.0`:按 D4 约定,创建与推送均需用户确认。
+- **发布标签 `dev-project-local-v0.1.0` 未创建。** 2026-07-27 用户决定暂不创建,
+  等 CI 结果出来后再定。CI 现已双绿,标签仍待用户拍板。版本号不动的约定不变。
+- **Claude Code 会话可见性未实机验证。** Codex 侧用 `codex debug prompt-input` 实测通过
+  (已安装项目从项目级路径解析、未安装项目完全不列出);Claude Code 没有等价的零成本
+  prompt dump 命令,只验证了文件布局与 `.mcp.json` 内容。见 docs-release/research/e2e.md §3。
+- **`sync-upstream.mjs` 的两条 push 语句从未真实执行。** 全部演练均带 `--no-push`。
+  首次真实同步时需留意。
 
 ## 任务地图
 
