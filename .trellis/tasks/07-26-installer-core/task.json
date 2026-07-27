@@ -3,7 +3,7 @@
   "name": "installer-core",
   "title": "Installer core with self-contained skill copy",
   "description": "install.mjs + lib: project root resolution, self-contained skill assembly (SKILL.md + bundled scripts), install manifest, git exclude, idempotent re-install",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
