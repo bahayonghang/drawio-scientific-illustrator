@@ -3,7 +3,7 @@
   "name": "upstream-sync",
   "title": "Upstream sync script",
   "description": "sync-upstream.mjs: ff-only main sync, dev rebase, safety guards, no destructive git",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

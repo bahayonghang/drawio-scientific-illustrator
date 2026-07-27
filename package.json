@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "check": "node --check plugins/drawio-scientific-illustrator/scripts/drawio-path.mjs && node --check plugins/drawio-scientific-illustrator/scripts/live-server.mjs && node --check plugins/drawio-scientific-illustrator/scripts/server.mjs && node scripts/validate-repo.mjs",
-    "test": "npm run check && node scripts/smoke-test.mjs"
+    "test": "npm run check && node scripts/smoke-test.mjs",
+    "sync:upstream": "node scripts/sync-upstream.mjs"
   },
   "engines": {
     "node": ">=22"

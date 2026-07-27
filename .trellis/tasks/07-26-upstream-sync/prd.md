@@ -25,8 +25,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 脏工作区、remote URL 不符、main 不可 ff 三种场景均中止且不改动仓库状态
-      (用临时克隆仓库演练,证据存 research/)。
-- [ ] 干净场景 `--no-push` 演练成功:main 与 upstream/main 对齐,dev 完成 rebase。
-- [ ] 冲突场景演练:指引输出正确,`git rebase --abort` 后仓库还原。
-- [ ] `node --check` 通过,`npm test` 保持通过。
+- [x] 脏工作区、remote URL 不符、main 不可 ff 三种场景均中止且不改动仓库状态
+      (用临时克隆仓库演练,证据存 research/)。S1/S2/S3,见 research/verification.md。
+      注:S3 的 ff 判定在 `fetch` 之后,fetch 只动 remote-tracking ref,已记录。
+- [x] 干净场景 `--no-push` 演练成功:main 与 upstream/main 对齐,dev 完成 rebase。S4。
+- [x] 冲突场景演练:指引输出正确,`git rebase --abort` 后仓库还原。S5。
+- [x] `node --check` 通过,`npm test` 保持通过(55/55 适配器单测亦通过)。
+- [x] 额外演练:`--skip-dev-rebase`(S6)、未知参数(S7)。
+- [x] `package.json` 增加 `sync:upstream`;validate-repo.mjs 不读 package.json,不受影响。
