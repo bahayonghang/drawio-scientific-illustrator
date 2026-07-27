@@ -86,33 +86,77 @@ JSON 读-改-写:保留未知字段与既有 servers,只增改 `drawio-live`、`
 `args` 使用**项目根相对路径**(`.claude/skills/.../scripts/live-server.mjs`),避免把机器
 绝对路径写进可能被提交的文件。写前备份 `.mcp.json.bak`。
 
+已验证约束(research/platform-mcp-behavior.md 第 1 项):`.mcp.json` stdio 条目**没有 `cwd`
+键**,文档也未规定 `args` 相对路径的基准目录;实际以 Claude Code 的启动目录解析。
+`${CLAUDE_PROJECT_DIR}` 只存在于被拉起的 server 环境里,不在 Claude Code 自身环境里,
+写进 `.mcp.json` 必须带默认值(`${CLAUDE_PROJECT_DIR:-.}`),退化成 `.`,买不到任何东西。
+
+因此:相对路径是唯一可提交的选项,代价是一条必须写进文档的约束 ——
+**Claude Code 需从项目根启动**。安装器验证步骤按项目根解析路径并显式说明这一点。
+提供 `--mcp-path-style relative|absolute` 逃生舱;选 `absolute` 时 `.mcp.json` 一并进
+git exclude。
+
 冲突规则:同名 server 已存在且命令等价 → 复用不动;不等价且非清单管理 → 退出码 2,
 输出双方命令对比,绝不静默覆盖。
 
-### 4.2 Codex — `<Project>/.codex/config.toml`
+### 4.2 Codex — 双写(项目级 + 用户级)
 
-受控区块(沿用草稿文档 §9.3):
+**实测结论(research/platform-mcp-behavior.md 第 3b 项):codex-cli 0.145.0 完全忽略项目级
+`.codex/config.toml` 里的 `mcp_servers`。** `codex mcp get` 查不到、`codex mcp list` 不列、
+`codex exec` 实跑不拉起进程;标记项目为 `trust_level = "trusted"` 也无效。对应上游未修 bug
+openai/codex#13025。`codex mcp add` 无 `--scope`,只写用户级。
+
+用户决策(2026-07-27):**双写**。
+
+1. **项目级** `<Project>/.codex/config.toml` 受控区块 —— 照规范写,当前无效,等 #13025
+   修复后自动生效。Codex 配置分层里项目层优先于用户层且按键合并,同名 server 由项目层
+   胜出,不会产生重复条目,自愈。
+2. **用户级** `~/.codex/config.toml` 受控区块 —— 同名两条,让它今天就能用。
+
+两处内容一致,均采用 Codex 支持的 `cwd` + `./`-相对 args 形式(上游全局插件本身就是这么
+注册的,见 research 第 2 项):
 
 ```toml
-# >>> drawio-scientific-illustrator managed block
+# >>> drawio-scientific-illustrator managed block (project: <project-name>)
 [mcp_servers."drawio-live"]
 command = "node"
-args = ["<project-relative-or-absolute per research>/scripts/live-server.mjs"]
+args = ["./scripts/live-server.mjs"]
+cwd = "<abs path to that project's skill copy>"
+
+[mcp_servers."drawio-file-utils"]
+command = "node"
+args = ["./scripts/server.mjs"]
+cwd = "<abs path to that project's skill copy>"
 # <<< drawio-scientific-illustrator managed block
 ```
+
+**已知限制(必须写进文档与安装输出):Codex 上同一时间只能绑定一个项目。** server 名必须
+保持 `drawio-live` / `drawio-file-utils`(SKILL.md 按名字调工具,Codex 工具名按 server 名
+命名空间化),所以用户级那两条是全局单例。安装第二个项目会覆盖第一个项目的用户级绑定 ——
+安装器必须检测受控区块里已记录的项目路径,不同则**显式报告将要重绑定并要求 `--force`**,
+不静默覆盖。#13025 修复后此限制自动消失(项目层各自生效)。
+
+用户级配置**是**用户设置,只在受控区块内增删;`uninstall` 两处都清。用户级路径是绝对路径,
+但它落在 `~/.codex/config.toml`(本就机器本地、不进版本库),不违反"别把本地路径写进可提交
+文件"的红线。
 
 实现约束:区块外内容逐字节保留;冲突检测用手写 TOML 表头扫描(只需识别
 `[mcp_servers."name"]` 表头,零依赖前提下不引入 TOML parser——比草稿文档建议的
 "用 TOML Parser"降级,理由:仓库禁止依赖,且需求只是检测同名表头,不是通用 TOML 编辑);
 UTF-8 无 BOM;保持原换行风格;写前备份。
 
-### 4.3 研究项(mcp-config-writers 子任务启动前必须落到 research/)
+### 4.3 研究项 —— 已结案
 
-- Claude Code `.mcp.json` 中相对路径的解析基准(项目根?启动目录?)——决定 4.1 用
-  相对还是绝对路径;若必须绝对路径,则该文件必须进 git exclude 且文档标注不可提交。
-- Codex `mcp_servers` 是否支持 `cwd` 键、args 相对路径基准。
-- Codex 项目级 Skill 发现目录究竟是 `.agents/skills/` 还是其他(草稿文档断言,未验证);
-  验证不通过则调整 R2 的 Codex 安装路径。
+三项全部完成,证据与来源见
+`.trellis/tasks/07-26-mcp-config-writers/research/platform-mcp-behavior.md`:
+
+| 研究项 | 结论 | 影响 |
+|---|---|---|
+| Claude `.mcp.json` 路径基准 / `cwd` | 无 `cwd` 键;相对路径以启动目录为准 | §4.1 保持相对路径 + 新增启动目录约束与逃生舱 |
+| Codex `mcp_servers` 的 `cwd` 与 args 基准 | 支持 `cwd`,args 相对 `cwd` | §4.2 采用 `cwd` + `./` 形式 |
+| Codex 项目级 Skill 目录 | `.agents/skills/` 确认(实测) | §2 与 PRD R2 不变 |
+
+额外发现(未在原研究项内,但改变了设计):Codex 项目级 MCP 不生效 → §4.2 改双写。
 
 ## 5. 安装清单 Schema(v2,扩展草稿文档 §11)
 

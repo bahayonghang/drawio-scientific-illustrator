@@ -38,19 +38,28 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
 ### R2 双平台安装
 - Claude Code:Skill 装入 `<Project>/.claude/skills/recreate-scientific-figure-in-drawio/`,
   MCP 写入项目根 `.mcp.json`。
-- Codex:Skill 装入 `<Project>/.agents/skills/recreate-scientific-figure-in-drawio/`,
-  MCP 写入 `<Project>/.codex/config.toml` 受控区块。
+- Codex:Skill 装入 `<Project>/.agents/skills/recreate-scientific-figure-in-drawio/`
+  (`.agents/skills/` 已实测确认为 Codex 项目级发现目录)。
+- Codex MCP **双写**(2026-07-27 决策,起因见下):项目级 `<Project>/.codex/config.toml`
+  受控区块 + 用户级 `~/.codex/config.toml` 受控区块,两处内容一致。
 - `--platform claude|codex|both|auto`,默认 `auto`(按项目内已有 `.claude/`/`.codex/`/
   `.agents/` 目录探测,探测不到时要求显式指定)。
 - 两个 MCP Server 的名称(`drawio-live`、`drawio-file-utils`)与工具 Schema 不变。
+- Claude Code 侧已知约束:`.mcp.json` 无 `cwd` 键,`args` 相对路径以 Claude Code 启动
+  目录解析,故**必须从项目根启动 `claude`**;安装输出与文档需明说。
+- Codex 侧已知限制:`mcp_servers` 的项目级配置在 codex-cli 0.145.0 上被完全忽略
+  (上游 bug openai/codex#13025),用户级那一份才是今天真正生效的;因此 **Codex 上同一
+  时间只能绑定一个项目**。安装第二个项目时必须检测到已有绑定、显式报告并要求 `--force`,
+  不得静默重绑定。#13025 修复后限制自动消失。
 
 ### R3 安装生命周期
 - `install.mjs`:环境检查 → 冲突检查 → 装配 Skill → 写 MCP 配置 → 写安装清单 → 验证。
   重复安装幂等。
 - `update.mjs`:从当前 fork 重新装配,临时目录 + 原子替换,失败恢复旧目录;默认不
   `git pull`,可选 `--pull-source`(仅 ff-only)。
-- `uninstall.mjs`:按清单删除 Skill、MCP 受控配置、git exclude 区块、清单本身;只删除
-  清单记录的路径;路径被用户改为非本工具内容时中止并提示人工处理。
+- `uninstall.mjs`:按清单删除 Skill、MCP 受控配置(含 `~/.codex/config.toml` 里的用户级
+  受控区块)、git exclude 区块、清单本身;只删除清单记录的路径;路径被用户改为非本工具
+  内容时中止并提示人工处理。
 - 安装清单 `.agents/drawio-scientific-install.json` 记录来源 commit、平台、受控路径。
 
 ### R4 安全规则(继承草稿文档 §21.1)
@@ -61,6 +70,9 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
 - `--migrate-from-global-plugin` 显式触发:先装好项目级 Skill 与 MCP 并预验证,再
   `codex plugin remove drawio-scientific-illustrator@drawio-scientific-tools`。
 - 不删除 Marketplace 仓库目录;迁移不得造成 Skill 与 MCP 同时不可用。
+- 双写决策后迁移的必要性上升:全局插件与我们写的用户级受控区块会用**同名** server
+  (`drawio-live`/`drawio-file-utils`)。安装到 Codex 时若检测到全局插件仍在,必须报告
+  这一重名并建议迁移或 `--mcp none`,不得静默产生两个来源。
 
 ### R6 上游同步
 - `scripts/sync-upstream.mjs`:工作区不干净中止;`main` 仅 ff-only 合并 `upstream/main`;
@@ -81,7 +93,8 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
 ## 跨子任务验收标准(父任务集成评审用)
 
 - [ ] 在一个全新 Git 项目上 `install → 验证 → update → uninstall` 全链路幂等通过(双平台各一次)。
-- [ ] 卸载后目标项目无残留(Skill 目录、MCP 条目、exclude 区块、清单全部移除)。
+- [ ] 卸载后目标项目无残留(Skill 目录、MCP 条目、exclude 区块、清单全部移除),
+      且 `~/.codex/config.toml` 的用户级受控区块也被移除、区块外内容逐字节不变。
 - [ ] `$HOME/.claude/skills`、`$HOME/.agents/skills`、`$HOME/.codex/skills` 在测试前后无新增本 Skill。
 - [ ] `git diff upstream/main -- plugins/drawio-scientific-illustrator` 为空(核心区零改动)。
 - [ ] `npm test` 与 `npm run test:project-local` 全部通过;CI 双系统绿色。
