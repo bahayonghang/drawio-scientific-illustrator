@@ -3,7 +3,7 @@
   "name": "mcp-config-writers",
   "title": "MCP config writers for Claude Code and Codex",
   "description": "Project-scoped .mcp.json JSON patcher and .codex/config.toml managed-block patcher, name-conflict protection, None scope",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

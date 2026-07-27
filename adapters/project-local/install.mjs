@@ -18,7 +18,12 @@ import {
   skillRelativePath,
 } from "./lib/platform.mjs";
 import { resolveProjectRoot } from "./lib/project-root.mjs";
-import { writeMcpConfig } from "./lib/mcp.mjs";
+import {
+  checkMcpConflicts,
+  codexProjectConfigPath,
+  writeMcpConfig,
+} from "./lib/mcp.mjs";
+import { userConfigPath } from "./lib/patch-codex-config.mjs";
 import { verifyInstall } from "./lib/verify-install.mjs";
 
 const SPEC = {
@@ -38,6 +43,12 @@ const SPEC = {
     default: "project",
     choices: ["project", "none"],
     describe: "MCP config scope",
+  },
+  "mcp-path-style": {
+    type: "string",
+    default: "relative",
+    choices: ["relative", "absolute"],
+    describe: "How .mcp.json refers to the server scripts (Claude Code only)",
   },
   "track-in-git": {
     type: "boolean",
@@ -90,6 +101,15 @@ async function main() {
   for (const [platform, skillDir] of skillDirs) {
     checkConflict({ platform, skillDir, root, previous, force: args.force });
   }
+  checkMcpConflicts({
+    scope: args.mcp,
+    root,
+    platforms,
+    skillDirs,
+    manifest: previous,
+    pathStyle: args.mcpPathStyle,
+    force: args.force,
+  });
   log.ok("no conflicts");
 
   log.step("Assembling skill package");
@@ -105,17 +125,29 @@ async function main() {
     root,
     platforms,
     skillDirs,
+    manifest: previous,
+    pathStyle: args.mcpPathStyle,
     dryRun,
     force: args.force,
   });
 
-  const manifest = buildManifest({ previous, root, platforms, mcp: args.mcp });
+  const manifest = buildManifest({
+    previous,
+    root,
+    platforms,
+    mcp: args.mcp,
+    pathStyle: args.mcpPathStyle,
+  });
 
   log.step("Updating .git/info/exclude");
-  applyExcludeBlock(root, excludeEntries(manifest, args.trackInGit), {
-    isGitRepo,
-    dryRun,
-  });
+  applyExcludeBlock(
+    root,
+    excludeEntries(manifest, args.trackInGit, args.mcpPathStyle),
+    {
+      isGitRepo,
+      dryRun,
+    },
+  );
 
   log.step("Writing install manifest");
   writeManifest(root, manifest, { dryRun });
@@ -171,17 +203,18 @@ function checkConflict({ platform, skillDir, root, previous, force }) {
   }
 }
 
-function excludeEntries(manifest, trackInGit) {
+function excludeEntries(manifest, trackInGit, pathStyle) {
   const entries = [];
   if (!trackInGit) {
     for (const entry of Object.values(manifest.platforms))
       entries.push(`${entry.skillPath}/`);
   }
-  entries.push(MANIFEST_RELATIVE, ".mcp.json.bak");
+  entries.push(MANIFEST_RELATIVE, ".mcp.json.bak", ".codex/config.toml.bak");
+  if (pathStyle === "absolute") entries.push(".mcp.json");
   return entries;
 }
 
-function buildManifest({ previous, root, platforms, mcp }) {
+function buildManifest({ previous, root, platforms, mcp, pathStyle }) {
   const now = new Date().toISOString();
   const updates = {};
   for (const platform of platforms) {
@@ -195,6 +228,10 @@ function buildManifest({ previous, root, platforms, mcp }) {
             : ".codex/config.toml",
       mcpScope: mcp,
     };
+    if (mcp !== "none" && platform === "claude")
+      updates[platform].mcpPathStyle = pathStyle;
+    if (mcp !== "none" && platform === "codex")
+      updates[platform].userMcpConfig = userConfigPath();
   }
   const platformEntries = mergePlatforms(previous?.platforms, updates);
 
@@ -249,10 +286,21 @@ function printSummary({ root, platforms, mcp, dryRun }) {
     log.info(
       "No MCP servers were configured; the skill cannot draw until they are.",
     );
+    return;
   }
-  log.info(
-    "Launch `claude` from the project root: .mcp.json resolves server paths against the launch directory.",
-  );
+  if (platforms.includes("claude")) {
+    log.info(
+      "Launch `claude` from the project root: .mcp.json resolves server paths against the launch directory.",
+    );
+  }
+  if (platforms.includes("codex")) {
+    log.info(
+      `Codex MCP servers were written to both ${codexProjectConfigPath(root)} and ${userConfigPath()}.`,
+    );
+    log.info(
+      "Only the user-level copy takes effect today, so Codex can be bound to one project at a time.",
+    );
+  }
 }
 
 runMain(main);

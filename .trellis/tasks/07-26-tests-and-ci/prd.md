@@ -40,6 +40,13 @@ npm scripts,并新增 GitHub Actions 工作流(Node 22 × Windows/Ubuntu)。不�
 - 测试套件前后快照 `$HOME/.claude/skills`、`$HOME/.agents/skills`、`$HOME/.codex/skills`,
   断言未新增 `recreate-scientific-figure-in-drawio`。实现上所有测试必须重定向 HOME 相关
   写入到临时目录,此检查作为兜底断言。
+- `~/.codex/config.toml` **不要比对 mtime** —— Codex 自身在日常操作中就会重写该文件
+  (实测:全程 `CODEX_HOME` 重定向的情况下真实配置仍被 Codex 改动),mtime 断言必然假阳性。
+  改用两条精确断言(子任务 3 已手工验证,见其 `research/verification.md`):
+  1. 真实配置不含 `drawio-scientific-illustrator managed block`;
+  2. `~/.codex/config.toml.bak` 时间戳未被刷新 —— 本安装器的 `write()` 每次写入前必 copy
+     一份 `.bak`,故 `.bak` 未动即是"写入器从未针对该路径运行过"的正面证据。
+- 所有 Codex 用户级测试必须设置 `CODEX_HOME` 指向临时目录。
 
 ### npm scripts 与 CI
 - `package.json`:`test:project-local`(`node --test adapters/project-local/tests/`)、
