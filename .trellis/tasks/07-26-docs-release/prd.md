@@ -53,14 +53,23 @@
 
 ## Acceptance Criteria
 
-- [ ] 四份新文档 + `README.dev.md` 链接更新全部提交,内容与实际 CLI 行为一致
-      (逐条参数对照 `install.mjs --help` 输出)。
-- [ ] `npm test` 与 `npm run test:all` 通过;`validate-repo.mjs` 对新增文档无告警。
-- [ ] `research/e2e.md` 记录 D2 全部步骤的实际结果(含截图或工具返回摘要)、
-      隔离性验证、删除 fork 后仍可用的证据。
-- [ ] D3 全局污染快照对比结果为"无新增",记录在案。
-- [ ] 父任务 7 条跨子任务验收标准全部勾选,每条注明证据位置。
-- [ ] 标签 `dev-project-local-v0.1.0` 已就绪,推送与否由用户拍板并在任务中记录结论。
+- [x] 四份新文档 + `README.dev.md` 链接更新全部提交(commit `535dcdf`),参数逐条对照
+      三个 `--help` 输出核对。E2E 推翻了初稿里"全部内容都进 exclude、`git status` 保持干净"
+      的说法,已改正(见 research/e2e.md §7)。
+- [x] `npm test` 与 `npm run test:all` 通过(72/72);`validate-repo.mjs` 对新增文档无告警
+      (文档已扫描无 `C:\Users\...` 字面量)。
+- [x] `research/e2e.md` 记录 D2 全部步骤实际结果、隔离性验证、删除 fork 后仍可用的证据。
+- [x] D3 全局污染复核为"无新增",记录在 e2e.md §8。
+- [~] 父任务 7 条已逐条标注证据位置;其中 2 条带限定:CI 双绿待 push,
+      Claude Code 会话可见性未实机验证(仅 Codex 侧实测)。
+- [ ] 标签 `dev-project-local-v0.1.0`:待用户拍板,尚未创建。
+
+## 本任务发现的缺陷(已修复,记录以备回溯)
+
+- `uninstall.mjs` 卸载后遗留 `~/.codex/config.toml.drawio-install.bak`,
+  归属子任务 4。由子任务 6 的全局污染守卫在实机 E2E 中抓到。
+  修复 commit `21ba4c4` + 回归测试。详见 research/e2e.md §6。
+- 文档初稿关于 exclude 覆盖范围的描述有误(代码正确、文档错误),已改正。
 
 ## Notes
 

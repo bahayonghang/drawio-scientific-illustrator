@@ -92,15 +92,37 @@ fork 仓库路径即可运行;同时支持 Claude Code 与 Codex 两个平台;�
 
 ## 跨子任务验收标准(父任务集成评审用)
 
-- [ ] 在一个全新 Git 项目上 `install → 验证 → update → uninstall` 全链路幂等通过(双平台各一次)。
-- [ ] 卸载后目标项目无残留(Skill 目录、MCP 条目、exclude 区块、清单全部移除),
-      且 `~/.codex/config.toml` 的用户级受控区块也被移除、区块外内容逐字节不变。
-- [ ] `$HOME/.claude/skills`、`$HOME/.agents/skills`、`$HOME/.codex/skills` 在测试前后无新增本 Skill。
-- [ ] `git diff upstream/main -- plugins/drawio-scientific-illustrator` 为空(核心区零改动)。
-- [ ] `npm test` 与 `npm run test:project-local` 全部通过;CI 双系统绿色。
-- [ ] Windows 实机端到端:目标项目新会话中 Skill 可见,`drawio_live_launch` → `graph_ready=true`
-  → 加节点/边 → 截图 → 保存 → validate → 导出 PNG 全流程可用;未安装项目中 Skill 不可见。
-- [ ] 上游同步演练一次成功,同步后已安装项目不受影响(Copy 模式本就与 fork 解耦)。
+- [x] 在一个全新 Git 项目上 `install → 验证 → update → uninstall` 全链路幂等通过(双平台各一次)。
+      证据:`07-26-docs-release/research/e2e.md` §1、§4、§5(实机 `--platform both`);
+      幂等由 `integration.test.mjs` row 5 断言(重装后配置与 skill 文件逐字节不变)。
+- [x] 卸载后目标项目无残留,且 `~/.codex/config.toml` 用户级区块移除、区块外逐字节不变。
+      证据:e2e.md §5 —— 项目只剩 `.git/` 与 `README.md`,`git status --porcelain` 为空;
+      真实用户配置 sha256 与安装前完全一致(`017c2bf5…`,17893 bytes)。
+      **本条曾不成立**:卸载遗留 `~/.codex/config.toml.drawio-install.bak`,见 e2e.md §6,已修复
+      (commit `21ba4c4`)并加回归测试。
+- [x] `$HOME/.claude/skills`、`$HOME/.agents/skills`、`$HOME/.codex/skills` 无新增本 Skill。
+      证据:e2e.md §8;`tests/check-global-pollution.mjs` 每次 `test:project-local` 兜底,
+      且做过反向验证(伪造 HOME 时三条断言全部触发)。
+- [x] `git diff upstream/main -- plugins/drawio-scientific-illustrator` 为空。
+      2026-07-27 复核输出为空。
+- [~] `npm test` 与 `npm run test:project-local` 全部通过(本地 Windows 72/72,含污染检查);
+      **CI 双系统绿色待 push 后确认** —— 见下方"未完成项"。
+- [~] Windows 实机端到端全流程可用;未安装项目中 Skill 不可见。
+      证据:e2e.md §2(删除 fork 副本后仍完成 launch → 加节点/边 → fit → 截图 → 保存 →
+      validate → 导出 PNG,PNG 实际渲染正确)、§3(Codex `debug prompt-input`:已安装项目从
+      项目级路径解析该 Skill,未安装项目完全不列出)。
+      **限定**:Codex 侧为实测;**Claude Code 侧未实机验证会话可见性**(无等价的零成本
+      prompt dump 命令),仅验证了文件布局与 `.mcp.json` 内容正确。见 e2e.md §3 末尾。
+- [x] 上游同步演练一次成功,同步后已安装项目不受影响。
+      证据:`archive/2026-07/07-26-upstream-sync/research/verification.md` S1–S7
+      (7 个场景,含冲突保留现场与 `--abort` 还原)。解耦性由 e2e.md §2 直接证明
+      (fork 副本删除后安装仍完全可用)。**限定**:所有演练均带 `--no-push`,
+      两条 push 语句尚未真实执行过。
+
+### 未完成项(需用户决策)
+
+- CI 双系统绿色:需 push `dev` 触发 `.github/workflows/project-local-adapter.yml`。
+- 发布标签 `dev-project-local-v0.1.0`:按 D4 约定,创建与推送均需用户确认。
 
 ## 任务地图
 
