@@ -62,22 +62,28 @@ git fetch upstream --prune
 ## Validation
 
 ```bash
-npm test
+npm test           # plugin: node --check, validate-repo, MCP smoke test
+npm run test:all   # the above plus the project-local adapter suite
 ```
 
-Runs `node --check` on the three server scripts, `scripts/validate-repo.mjs`, and a
-smoke test that spawns both MCP servers and asserts `tools/list` is non-empty. The
-smoke test never calls a tool and needs no draw.io installation, so a green run says
-nothing about actual drawing behaviour.
+The smoke test spawns both MCP servers and asserts `tools/list` is non-empty. It
+never calls a tool and needs no draw.io installation, so a green run says nothing
+about actual drawing behaviour.
 
-Note that `scripts/validate-repo.mjs` scans only five specific files for local
-absolute paths and credential-like strings. New directories are not covered — keep
-machine-specific paths out of committed files by hand.
+`scripts/validate-repo.mjs` scans the five shipped plugin files **and every `.mjs`
+under `adapters/project-local/`** for local absolute paths and credential-like
+strings. A `C:\Users\...` literal in any of them fails the build — including in test
+fixtures, so build fixture paths from `os.tmpdir()`.
+
+`npm run test:project-local` runs the adapter tests and then a guard asserting that
+nothing was written into your real home directory.
 
 ## Project-local installation
 
 Install the skill and both MCP servers into a target project. See
-[`docs/project-local-install.md`](docs/project-local-install.md).
+[`docs/project-local-install.md`](docs/project-local-install.md) for the walkthrough
+and [`adapters/project-local/README.md`](adapters/project-local/README.md) for the
+CLI reference.
 
 ## Migrating off the global Codex plugin
 

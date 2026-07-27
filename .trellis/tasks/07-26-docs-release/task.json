@@ -3,7 +3,7 @@
   "name": "docs-release",
   "title": "Docs and release validation",
   "description": "Adapter README, install/migration/upstream-sync docs, Windows E2E validation, isolation check, release tag",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
