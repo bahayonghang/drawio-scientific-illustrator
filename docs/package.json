@@ -1,0 +1,14 @@
+{
+  "name": "drawio-scientific-illustrator-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VitePress documentation for Draw.io Scientific Illustrator",
+  "scripts": {
+    "dev": "vitepress dev .",
+    "build": "vitepress build .",
+    "preview": "vitepress preview ."
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0"
+  }
+}

@@ -1,6 +1,6 @@
 # Draw.io Scientific Illustrator
 
-[中文说明](#中文说明) · [English guide](#english-guide) · [MIT License](LICENSE)
+[中文说明 (README_zh.md)](README_zh.md) · [VitePress Docs](docs/index.md) · [English Guide](#english-guide) · [MIT License](LICENSE)
 
 A Codex plugin that lets an AI agent draw scientific figures **live inside the visible draw.io desktop canvas**. You can watch shapes, labels, arrows, styling, and layout appear step by step. The live workflow calls draw.io's own graph API through a localhost-only MCP server; it does not automate the operating-system mouse or keyboard and does not create XML first and merely open it afterward.
 
@@ -38,6 +38,17 @@ Clone it locally, register its repository root as a Codex marketplace, install
 drawio-scientific-illustrator@drawio-scientific-tools, then tell me when to restart Codex.
 ```
 
+#### Using just (recommended if `just` is installed)
+
+```bash
+just install          # Installs for Codex (default)
+just install codex    # Installs for Codex
+just install claude   # Installs project-local skill & MCP for Claude Code
+just install both     # Installs project-local skill & MCP for both Codex & Claude Code
+```
+
+This automatically detects your operating system and invokes `install.ps1` on Windows or `install.sh` on macOS/Linux with the specified target platform.
+
 #### Windows one-command installer
 
 Review [`install.ps1`](install.ps1), then run:
@@ -55,6 +66,14 @@ curl -fsSL https://raw.githubusercontent.com/icebird1998/drawio-scientific-illus
 ```
 
 Restart Codex and start a new task after installation so the new skill and MCP tools are loaded.
+
+### Local Documentation Server
+
+To start the VitePress documentation server locally:
+
+```bash
+just docs
+```
 
 ### Install — manual and auditable
 
@@ -195,6 +214,15 @@ Draw.io Scientific Illustrator 是一个面向科研插图的 Codex 插件。它
 drawio-scientific-illustrator@drawio-scientific-tools。完成后告诉我何时重启 Codex。
 ```
 
+使用 `just` 命令自动识别系统并针对指定平台安装（如果系统已安装 `just`）：
+
+```bash
+just install          # 默认安装至 Codex
+just install codex    # 安装至 Codex
+just install claude   # 安装项目级本地 Skill & MCP 至 Claude Code
+just install both     # 同时安装至 Codex 和 Claude Code
+```
+
 Windows 用户也可以先检查 [`install.ps1`](install.ps1)，然后运行：
 
 ```powershell
@@ -208,6 +236,14 @@ curl -fsSL https://raw.githubusercontent.com/icebird1998/drawio-scientific-illus
 ```
 
 安装完成后必须重启 Codex，并新建一个任务，使新的 Skill 和 MCP 工具被载入。
+
+### 启动本地文档服务
+
+通过 VitePress 启动在线中英文文档服务：
+
+```bash
+just docs
+```
 
 ### 手动安装
 
