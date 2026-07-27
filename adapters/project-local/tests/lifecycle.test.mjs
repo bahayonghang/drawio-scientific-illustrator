@@ -55,6 +55,36 @@ test("install then uninstall leaves the project exactly as it was", () => {
   cleanup(codexHome);
 });
 
+test("uninstall removes the backup of the user-level Codex config too", () => {
+  const root = seededRepo("backup-cleanup");
+  const codexHome = makeTempDir("backup-cleanup-codex");
+  const userConfig = path.join(codexHome, "config.toml");
+  // Give the user a config of their own, so the installer backs it up rather
+  // than creating the file from scratch.
+  fs.writeFileSync(userConfig, 'model = "gpt-5"\n');
+
+  assert.equal(
+    runCli("install.mjs", ["--project", root, "--platform", "both"], {
+      codexHome,
+    }).status,
+    0,
+  );
+  assert.equal(fs.existsSync(`${userConfig}.drawio-install.bak`), true);
+
+  assert.equal(
+    runCli("uninstall.mjs", ["--project", root], { codexHome }).status,
+    0,
+  );
+
+  // The stray backup used to survive uninstall because the cleanup list was
+  // derived from the project root, which never names the user-level file.
+  assert.equal(fs.existsSync(`${userConfig}.drawio-install.bak`), false);
+  assert.equal(fs.readFileSync(userConfig, "utf8"), 'model = "gpt-5"\n');
+
+  cleanup(root);
+  cleanup(codexHome);
+});
+
 test("update reassembles an existing install", () => {
   const root = seededRepo("update");
   const codexHome = makeTempDir("update-codex");

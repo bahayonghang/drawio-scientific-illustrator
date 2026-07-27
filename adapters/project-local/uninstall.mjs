@@ -6,11 +6,7 @@ import { log, parseArgs, renderUsage, runMain } from "./lib/cli.mjs";
 import { applyExcludeBlock, removeExcludeBlock } from "./lib/git-exclude.mjs";
 import { manifestPath, writeManifest } from "./lib/install-manifest.mjs";
 import { loadInstalled } from "./lib/installed.mjs";
-import {
-  claudeConfigPath,
-  codexProjectConfigPath,
-  removeMcpConfig,
-} from "./lib/mcp.mjs";
+import { removeMcpConfig } from "./lib/mcp.mjs";
 import { skillDirFor } from "./lib/platform.mjs";
 import { describeInstalled } from "./lib/skill-package.mjs";
 
@@ -87,13 +83,13 @@ async function main() {
   }
 
   log.step("Removing MCP configuration");
-  removeMcpConfig({
+  const mcpResult = removeMcpConfig({
     root,
     platforms: targets,
     createdFiles: manifest.createdFiles ?? [],
     dryRun,
   });
-  removeBackups({ root, targets, dryRun });
+  removeBackups({ files: mcpResult.changed, dryRun });
 
   const remaining = platforms.filter(
     (platform) => !targets.includes(platform) || skipped.includes(platform),
@@ -142,17 +138,15 @@ async function main() {
   }
 }
 
-function removeBackups({ root, targets, dryRun }) {
-  const files = [];
-  if (targets.includes("claude"))
-    files.push(backupPathFor(claudeConfigPath(root)));
-  if (targets.includes("codex"))
-    files.push(backupPathFor(codexProjectConfigPath(root)));
-
-  for (const file of files) {
-    if (!fs.existsSync(file)) continue;
-    if (dryRun) log.plan(`remove ${file}`);
-    else fs.rmSync(file, { force: true });
+// Take the backup for every config file we actually edited, which includes the
+// user-level ~/.codex/config.toml. Deriving the list from the project root
+// missed that one and left a stray file in the user's home after uninstall.
+function removeBackups({ files, dryRun }) {
+  for (const config of files) {
+    const backup = backupPathFor(config);
+    if (!fs.existsSync(backup)) continue;
+    if (dryRun) log.plan(`remove ${backup}`);
+    else fs.rmSync(backup, { force: true });
   }
 }
 
