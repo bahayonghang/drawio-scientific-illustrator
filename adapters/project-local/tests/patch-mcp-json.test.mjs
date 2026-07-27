@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import { backupPathFor } from "../lib/backup.mjs";
 import { ExitError } from "../lib/cli.mjs";
 import { SERVER_NAMES } from "../lib/mcp-entries.mjs";
 import { patchMcpJson, removeMcpJson } from "../lib/patch-mcp-json.mjs";
@@ -34,7 +35,7 @@ test("creates the file when it does not exist", () => {
 
   const config = JSON.parse(readFile(file));
   assert.deepEqual(Object.keys(config.mcpServers), SERVER_NAMES);
-  assert.equal(fs.existsSync(`${file}.bak`), false);
+  assert.equal(fs.existsSync(backupPathFor(file)), false);
   cleanup(dir);
 });
 
@@ -57,7 +58,7 @@ test("keeps other servers and unknown top-level fields", () => {
     args: ["k.mjs"],
   });
   assert.equal(config.unknownTopLevel, 42);
-  assert.ok(fs.existsSync(`${file}.bak`));
+  assert.ok(fs.existsSync(backupPathFor(file)));
   cleanup(dir);
 });
 

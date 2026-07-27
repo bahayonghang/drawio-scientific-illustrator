@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { backupPathFor } from "./backup.mjs";
 import { ExitError, log } from "./cli.mjs";
 import { entriesEqual } from "./mcp-entries.mjs";
 
@@ -29,7 +30,7 @@ function readConfig(file) {
 }
 
 function writeConfig(file, config, existed) {
-  if (existed) fs.copyFileSync(file, `${file}.bak`);
+  if (existed) fs.copyFileSync(file, backupPathFor(file));
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(tmp, `${JSON.stringify(config, null, 2)}\n`, "utf8");
@@ -79,10 +80,11 @@ export function patchMcpJson({
     changed.push(entry.name);
   }
 
-  if (changed.length === 0) return { changed, reused, wrote: false };
+  if (changed.length === 0)
+    return { changed, reused, wrote: false, created: false };
   if (dryRun) {
     if (!quiet) log.plan(`update ${changed.length} MCP server(s) in ${file}`);
-    return { changed, reused, wrote: false };
+    return { changed, reused, wrote: false, created: !existed };
   }
 
   for (const entry of entries) {
@@ -90,7 +92,7 @@ export function patchMcpJson({
     config.mcpServers[entry.name] = buildServer(entry);
   }
   writeConfig(file, config, existed);
-  return { changed, reused, wrote: true };
+  return { changed, reused, wrote: true, created: !existed };
 }
 
 function buildServer(entry) {
@@ -120,6 +122,17 @@ export function removeMcpJson({ file, names, dryRun = false }) {
   }
 
   for (const name of changed) delete config.mcpServers[name];
+  if (isEmptyConfig(config)) return { changed, emptied: true };
+
   writeConfig(file, config, existed);
-  return { changed };
+  return { changed, emptied: false };
+}
+
+function isEmptyConfig(config) {
+  const keys = Object.keys(config);
+  return (
+    keys.length === 1 &&
+    keys[0] === "mcpServers" &&
+    Object.keys(config.mcpServers).length === 0
+  );
 }

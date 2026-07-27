@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { backupPathFor } from "../lib/backup.mjs";
 import { ExitError } from "../lib/cli.mjs";
 import {
   patchCodexConfig,
@@ -48,7 +49,7 @@ test("preserves existing user configuration verbatim", () => {
   assert.ok(text.startsWith(USER_TOML.trimEnd()));
   assert.match(text, /^model = "gpt-5"$/m);
   assert.match(text, /my-other-server/);
-  assert.ok(fs.existsSync(`${file}.bak`));
+  assert.ok(fs.existsSync(backupPathFor(file)));
   cleanup(dir);
 });
 

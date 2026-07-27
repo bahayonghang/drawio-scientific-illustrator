@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { backupPathFor } from "./backup.mjs";
 import { ExitError, log } from "./cli.mjs";
 import { SERVER_NAMES } from "./mcp-entries.mjs";
 import { normalize } from "./paths.mjs";
@@ -80,7 +81,7 @@ function quote(value) {
 }
 
 function write(file, lines, newline, existed) {
-  if (existed) fs.copyFileSync(file, `${file}.bak`);
+  if (existed) fs.copyFileSync(file, backupPathFor(file));
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(
@@ -124,6 +125,7 @@ export function patchCodexConfig({
     }
   }
 
+  const created = !existed;
   const rendered = renderBlock(entries, normalizedRoot);
   const before = block ? lines.slice(0, block.start) : [...lines];
   const after = block ? lines.slice(block.end + 1) : [];
@@ -140,16 +142,16 @@ export function patchCodexConfig({
     existed &&
     nextText === (text.endsWith(newline) ? text : `${text}${newline}`)
   ) {
-    return { changed: false, rebindFrom, wrote: false };
+    return { changed: false, rebindFrom, wrote: false, created: false };
   }
 
   if (dryRun) {
     if (!quiet) log.plan(`update managed block in ${file}`);
-    return { changed: true, rebindFrom, wrote: false };
+    return { changed: true, rebindFrom, wrote: false, created };
   }
 
   write(file, next, newline, existed);
-  return { changed: true, rebindFrom, wrote: true };
+  return { changed: true, rebindFrom, wrote: true, created };
 }
 
 function trimLeadingBlanks(lines) {
@@ -177,8 +179,10 @@ export function removeCodexConfig({ file, dryRun = false }) {
   const next = [...before, ...trimLeadingBlanks(lines.slice(block.end + 1))];
   while (next.length > 0 && next[next.length - 1] === "") next.pop();
 
+  if (next.length === 0) return { changed: true, emptied: true };
+
   write(file, next, newline, existed);
-  return { changed: true };
+  return { changed: true, emptied: false };
 }
 
 export function userConfigPath() {

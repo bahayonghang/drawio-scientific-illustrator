@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import { log } from "./cli.mjs";
@@ -44,6 +45,7 @@ export function writeMcpConfig({
   const warn = quiet ? () => {} : log.warn;
 
   const changed = [];
+  const created = [];
   const reused = [];
   const warnings = [];
 
@@ -61,6 +63,7 @@ export function writeMcpConfig({
         quiet,
       });
       if (result.changed.length > 0) changed.push(file);
+      if (result.created) created.push(file);
       if (result.reused.length > 0) {
         reused.push(file);
         say(`reused existing entries in ${file}: ${result.reused.join(", ")}`);
@@ -85,6 +88,7 @@ export function writeMcpConfig({
       quiet,
     });
     if (projectResult.changed) changed.push(projectFile);
+    if (projectResult.created) created.push(projectFile);
 
     const userFile = userConfigPath();
     const userResult = patchCodexConfig({
@@ -97,6 +101,7 @@ export function writeMcpConfig({
       enforceBinding: true,
     });
     if (userResult.changed) changed.push(userFile);
+    if (userResult.created) created.push(userFile);
     if (userResult.rebindFrom) {
       warn(
         `rebound Codex MCP servers from ${userResult.rebindFrom} to ${root}`,
@@ -106,23 +111,37 @@ export function writeMcpConfig({
   }
 
   for (const warning of warnings) warn(warning);
-  return { changed, reused, warnings };
+  return { changed, created, reused, warnings };
 }
 
-export function removeMcpConfig({ root, platforms, dryRun = false }) {
+export function removeMcpConfig({
+  root,
+  platforms,
+  createdFiles = [],
+  dryRun = false,
+}) {
   const changed = [];
+  const wasCreated = new Set(createdFiles.map((file) => normalize(file)));
+
+  const finish = (file, result) => {
+    changed.push(file);
+    if (!result.emptied) return;
+    if (!wasCreated.has(normalize(file))) return;
+    if (dryRun) log.plan(`remove ${file}`);
+    else fs.rmSync(file, { force: true });
+  };
 
   for (const platform of platforms) {
     if (platform === "claude") {
       const file = claudeConfigPath(root);
       const result = removeMcpJson({ file, names: SERVER_NAMES, dryRun });
-      if (result.changed.length > 0) changed.push(file);
+      if (result.changed.length > 0) finish(file, result);
       continue;
     }
 
     const projectFile = codexProjectConfigPath(root);
-    if (removeCodexConfig({ file: projectFile, dryRun }).changed)
-      changed.push(projectFile);
+    const projectResult = removeCodexConfig({ file: projectFile, dryRun });
+    if (projectResult.changed) finish(projectFile, projectResult);
 
     const userFile = userConfigPath();
     const bound = readManagedProject(userFile);
@@ -130,9 +149,10 @@ export function removeMcpConfig({ root, platforms, dryRun = false }) {
       log.warn(
         `left the user-level Codex block alone: it is bound to ${bound}, not ${root}.`,
       );
-    } else if (removeCodexConfig({ file: userFile, dryRun }).changed) {
-      changed.push(userFile);
+      continue;
     }
+    const userResult = removeCodexConfig({ file: userFile, dryRun });
+    if (userResult.changed) finish(userFile, userResult);
   }
 
   return { changed };

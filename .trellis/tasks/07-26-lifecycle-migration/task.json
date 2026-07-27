@@ -3,7 +3,7 @@
   "name": "lifecycle-migration",
   "title": "Update uninstall and global-plugin migration",
   "description": "update.mjs atomic resync, uninstall.mjs manifest-driven removal, explicit Codex global plugin migration",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

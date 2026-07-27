@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
+import { BACKUP_SUFFIX } from "./lib/backup.mjs";
 import { ExitError, log, parseArgs, renderUsage, runMain } from "./lib/cli.mjs";
 import { applyExcludeBlock } from "./lib/git-exclude.mjs";
 import {
@@ -23,6 +24,7 @@ import {
   codexProjectConfigPath,
   writeMcpConfig,
 } from "./lib/mcp.mjs";
+import { assertMigrationRequest, removeGlobalPlugin } from "./lib/migrate.mjs";
 import { userConfigPath } from "./lib/patch-codex-config.mjs";
 import { verifyInstall } from "./lib/verify-install.mjs";
 
@@ -58,6 +60,10 @@ const SPEC = {
     type: "boolean",
     describe: "Overwrite content this installer previously wrote",
   },
+  "migrate-from-global-plugin": {
+    type: "boolean",
+    describe: "After a verified install, remove the global Codex plugin",
+  },
   "skip-verification": {
     type: "boolean",
     describe: "Skip the post-install checks",
@@ -92,6 +98,13 @@ async function main() {
   const platforms = resolvePlatforms(args.platform, root);
   log.info(`Platforms: ${platforms.join(", ")}`);
 
+  const migration = args.migrateFromGlobalPlugin
+    ? assertMigrationRequest({
+        platforms,
+        skipVerification: args.skipVerification,
+      })
+    : null;
+
   const previous = readManifest(root);
   const skillDirs = new Map(
     platforms.map((platform) => [platform, skillDirFor(platform, root)]),
@@ -120,7 +133,7 @@ async function main() {
 
   log.step("Writing MCP configuration");
   if (args.mcp === "none") log.info("--mcp none: skipping MCP configuration.");
-  writeMcpConfig({
+  const mcpResult = writeMcpConfig({
     scope: args.mcp,
     root,
     platforms,
@@ -137,6 +150,7 @@ async function main() {
     platforms,
     mcp: args.mcp,
     pathStyle: args.mcpPathStyle,
+    createdFiles: mcpResult.created,
   });
 
   log.step("Updating .git/info/exclude");
@@ -167,6 +181,11 @@ async function main() {
       );
     }
     log.ok("skill package responds to tools/list");
+  }
+
+  if (migration) {
+    log.step("Migrating off the global Codex plugin");
+    removeGlobalPlugin({ plugin: migration, dryRun });
   }
 
   printSummary({ root, platforms, mcp: args.mcp, dryRun });
@@ -209,12 +228,23 @@ function excludeEntries(manifest, trackInGit, pathStyle) {
     for (const entry of Object.values(manifest.platforms))
       entries.push(`${entry.skillPath}/`);
   }
-  entries.push(MANIFEST_RELATIVE, ".mcp.json.bak", ".codex/config.toml.bak");
+  entries.push(
+    MANIFEST_RELATIVE,
+    `.mcp.json${BACKUP_SUFFIX}`,
+    `.codex/config.toml${BACKUP_SUFFIX}`,
+  );
   if (pathStyle === "absolute") entries.push(".mcp.json");
   return entries;
 }
 
-function buildManifest({ previous, root, platforms, mcp, pathStyle }) {
+function buildManifest({
+  previous,
+  root,
+  platforms,
+  mcp,
+  pathStyle,
+  createdFiles = [],
+}) {
   const now = new Date().toISOString();
   const updates = {};
   for (const platform of platforms) {
@@ -245,6 +275,9 @@ function buildManifest({ previous, root, platforms, mcp, pathStyle }) {
     projectRoot: root,
     mode: "copy",
     platforms: platformEntries,
+    createdFiles: [
+      ...new Set([...(previous?.createdFiles ?? []), ...createdFiles]),
+    ],
     managedPaths: [
       ...Object.values(platformEntries).map((entry) => `${entry.skillPath}/`),
       MANIFEST_RELATIVE,

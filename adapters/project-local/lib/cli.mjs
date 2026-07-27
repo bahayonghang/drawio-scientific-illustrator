@@ -63,16 +63,22 @@ function splitFlag(token) {
 
 export function renderUsage(name, spec, extraLines = []) {
   const lines = [`Usage: node adapters/project-local/${name} [options]`, ""];
-  const width = Math.max(...Object.keys(spec).map((flag) => flag.length)) + 2;
+  const labelFor = (flag, definition) =>
+    definition.type === "boolean" ? `--${flag}` : `--${flag} <value>`;
+  const width =
+    Math.max(
+      ...Object.entries(spec).map(
+        ([flag, definition]) => labelFor(flag, definition).length,
+      ),
+    ) + 2;
   for (const [flag, definition] of Object.entries(spec)) {
-    const label =
-      definition.type === "boolean" ? `--${flag}` : `--${flag} <value>`;
+    const label = labelFor(flag, definition);
     const notes = [];
     if (definition.choices) notes.push(definition.choices.join("|"));
     if (definition.default) notes.push(`default: ${definition.default}`);
     if (definition.required) notes.push("required");
     const suffix = notes.length > 0 ? ` (${notes.join(", ")})` : "";
-    lines.push(`  ${label.padEnd(width + 8)}${definition.describe}${suffix}`);
+    lines.push(`  ${label.padEnd(width)}${definition.describe}${suffix}`);
   }
   return [...lines, ...(extraLines.length > 0 ? ["", ...extraLines] : [])].join(
     "\n",
